@@ -1,0 +1,59 @@
+Login/Register Feature
+
+    "As an Employee or Manager, I should be able to log into the application.
+
+    Ability to register a new account
+
+    -Must ensure the username is not already registered
+    -Default employee role
+    -Should register with at least a username and password"
+
+        > abstract User class
+        >       must have a username and password
+        >   Employee extends User
+        >   Manager extends Manager
+        > Collection of Users
+        >   behavior for checking for existing usernames when a new account is registered
+        >   behavior for making an Employee user by default when an account is registered
+
+Submit Ticket Feature
+
+    "Employees can submit a new reimbursement ticket
+
+     Must have an amount
+     Must have a description
+     Should have a default status of Pending"
+
+        > ReimbursementTicket Class
+        >       must have amount, associated user, status
+        >   behavior for default status as "Pending" upon submission
+
+Ticketing System Feature
+
+    "Managers can process tickets submitted by employees
+
+     -Tickets can be Approved or Denied
+     -Tickets cannot change status after processing
+
+     Pending tickets should be added to a queue or list that managers can see
+
+     Tickets should be removed from the list, or queue, once processed (approved/denied) by a manager"
+
+        > Queue of Tickets
+        >       Managers control this
+        >       Tickets arrive from employees with pending status
+        >   behavior for Ticket approval or denial (processing)
+        >       behavior for automatically moving these to processed tickets list
+
+
+View Previous Tickets Feature
+
+    "As an Employee, I should be able to view all previous reimbursement ticket submissions.
+
+     Previous tickets should also show the details of submission."
+
+        > List of Processed tickets (approved/denied)
+        >       Can be viewed by Users
+        >       acts as a backlog for processed tickets
+        >   behavior for searching tickets
+        >   behavior for showing ticket details

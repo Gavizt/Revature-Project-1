@@ -1,0 +1,42 @@
+OPTIONAL FEATURES
+
+Reimbursement Types Feature
+
+    "Employees can add Reimbursement Types
+
+    -Travel, Lodging, Food, Other
+    -Employees can view previous requests filtered by type"
+
+        > add field to ReimbursementTicket Class for type
+        >   allows for filtering tickets by
+        >       Travel, Lodging, Food, Other
+
+Change Roles Feature
+
+    "Managers can change other users’ roles
+
+    com.revature.Employee to Manager or back to com.revature.Employee"
+
+        > add behaviors for Manager Users to:
+        >   set com.revature.Employee to Manager
+        >   set Manager to com.revature.Employee
+
+Upload Receipts Feature
+
+    "Employees can add images of receipts to their reimbursement requests
+
+    Upload and store images (in SQL or cloud storage)"
+
+        > add behavior to ReimbursementTicket Class for image upload of receipts
+
+User Accounts Feature
+
+    "User Profile/Account
+
+    -Track additional user information (name, address, etc.)
+    -Users can edit their account
+    -Users can add a profile picture"
+
+        > add fields name, address, etc. to User Class
+        > add behaviors for modifying these fields
+        > add behavior for uploading profile picture associated with User
