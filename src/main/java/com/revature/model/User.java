@@ -3,11 +3,17 @@ package com.revature.model;
 import java.util.Objects;
 
 /**
- * User class.
+ * User class for Employees and Managers:
+ *      Each user must register with a unique username and a password.
+ *      Role is set to "Employee" by default.
  *
  * @author johnainsworth
  */
 public class User {
+    /*
+    id number is unique to each class. id numbers are not reused or reassigned.
+    TODO
+     */
     private long id;
     private String role;
     private String username;
@@ -59,6 +65,9 @@ public class User {
     }
 
 
+    /*
+    Compare objects by their unique id
+     */
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -67,6 +76,9 @@ public class User {
         return this.id == user.id;
     }
 
+    /*
+    Generate hashcode with object's id
+     */
     @Override
     public int hashCode() {
         return Objects.hash(this.id);
