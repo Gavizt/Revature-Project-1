@@ -10,10 +10,6 @@ import java.util.Objects;
  * @author johnainsworth
  */
 public class User {
-    /*
-    id number is unique to each class. id numbers are not reused or reassigned.
-    TODO
-     */
     private long id;
     private String role;
     private String username;
@@ -30,7 +26,6 @@ public class User {
         this.username = username;
         this.password = password;
     }
-
 
     public long getId() {
         return this.id;
@@ -66,7 +61,7 @@ public class User {
 
 
     /*
-    Compare objects by their unique id
+    Objects are differed by their unique id.
      */
     @Override
     public boolean equals(Object o) {
@@ -77,7 +72,7 @@ public class User {
     }
 
     /*
-    Generate hashcode with object's id
+    Generate hashcode with object's id.
      */
     @Override
     public int hashCode() {
@@ -88,9 +83,9 @@ public class User {
     public String toString() {
         return "User{" +
                 "id=" + this.id +
-                ", role='" + this.role + '\'' +
-                ", username='" + this.username + '\'' +
-                ", password='" + this.password + '\'' +
+                ",\trole='" + this.role + '\'' +
+                ",\tusername='" + this.username + '\'' +
+                ",\tpassword='" + this.password + '\'' +
                 '}';
     }
 }
