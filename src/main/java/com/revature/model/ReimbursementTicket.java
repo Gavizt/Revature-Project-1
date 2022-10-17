@@ -14,17 +14,19 @@ public class ReimbursementTicket {
     private int amount;
     private String status;
     private long associatedUserId;
+    private String description;
 
 
     public ReimbursementTicket() {
         super();
     }
 
-    public ReimbursementTicket(long id, int amount, String status, long associatedUserId) {
+    public ReimbursementTicket(long id, int amount, String status, long associatedUserId, String description) {
         this.id = id;
-        this.amount = Math.max(amount, 0); // amount should not be negative
+        this.amount = amount;
         this.status = status;
         this.associatedUserId = associatedUserId;
+        this.description = description;
     }
 
 
@@ -60,6 +62,14 @@ public class ReimbursementTicket {
         this.associatedUserId = associatedUserId;
     }
 
+    public String getDescription() {
+        return this.description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
     /*
     Objects are differed by their unique id.
      */
@@ -81,11 +91,12 @@ public class ReimbursementTicket {
 
     @Override
     public String toString() {
-        return "ReimbursementTicket{" +
-                "id=" + id +
-                ",\tamount=" + amount +
-                ",\tstatus='" + status + '\'' +
-                ",\tassociatedUserId=" + associatedUserId +
+        return "ReimbursementTicket {" +
+                "id=\t" + id +
+                ", amount=\t" + amount +
+                ", status=\t'" + status + '\'' +
+                ", associatedUserId=\t" + associatedUserId +
+                "\n\tdescription=\t'" + description + '\'' +
                 '}';
     }
 }

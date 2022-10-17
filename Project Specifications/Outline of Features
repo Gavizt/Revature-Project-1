@@ -25,7 +25,7 @@ Submit Ticket Feature
      Should have a default status of Pending"
 
         > ReimbursementTicket Class
-        >       must have amount, associated user, status
+        >       must have amount, associated user, status, description
         >   behavior for default status as "Pending" upon submission
 
 Ticketing System Feature
