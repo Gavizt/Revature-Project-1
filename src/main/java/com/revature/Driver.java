@@ -16,7 +16,7 @@ public class Driver {
 
     public static void main(String[] args) {
 
-        Javalin app = Javalin.create().start(8002);
+        Javalin app = Javalin.create().start(8001);
 
         /*
         Collections for Users and Tickets
@@ -185,23 +185,82 @@ public class Driver {
 
         // List Users (Employees and Managers)
         // TODO Remove this expression! Testing purposes only.
-        app.get("/users", ctx -> {
-            System.out.println("\nUsers:");
-            if (users.size() == 0) {
-                System.out.println(" There are no registered users.");
-            } else {
-                for (User u:
-                        users) {
-                    System.out.println("\t" + u);
-                }
+        app.get("/users/{role}", ctx -> {
+            String receivedRole = ctx.pathParam("role");
+
+            switch (receivedRole.toLowerCase()) {
+                case "employees":
+                    // List all Employees
+                    System.out.println("\nEmployees:");
+                    for (User u:
+                         users) {
+                        if (u.getRole().equalsIgnoreCase("employee")) {
+                            System.out.println("\t" + u);
+                        }
+                    }
+                    break;
+                case "managers":
+                    // List all Managers
+                    System.out.println("\nManagers:");
+                    for (User u:
+                         users) {
+                        if (u.getRole().equalsIgnoreCase("manager")) {
+                            System.out.println("\t" + u);
+                        }
+                    }
+                    break;
+                default:
+                    // List all Users (both roles)
+                    System.out.println("\nUsers:");
+                    if (users.size() == 0) {
+                        System.out.println(" There are no registered users.");
+                    } else {
+                        for (User u:
+                                users) {
+                            System.out.println("\t" + u);
+                        }
+                    }
+                    break;
             }
 
             ctx.status(HttpStatus.OK);
         });
 
+        // List Tickets (ReimbursementTickets)
+        // TODO Remove this expression! Testing purposes only.
+        app.get("/tickets/{pendingOrProcessed}/{username}", ctx -> {
+            String receivedTicketListType = ctx.pathParam("pendingOrProcessed");
+            String receivedUsername = ctx.pathParam("username");
+            User foundUser = getUser(receivedUsername, users);
 
+            System.out.println("\nReceived '"
+                    + receivedTicketListType + "', '"
+                    + receivedUsername + "'");
+            System.out.print("\n Tickets for ");
 
+            switch (receivedTicketListType.toLowerCase()) {
+                default:
+                case "pending":
+                    // List pending Tickets
+                    System.out.println(" Pending tickets:");
+                    for (ReimbursementTicket t:
+                         pendingTickets) {
+                        System.out.println("\t" + t);
+                    }
 
+                    if (receivedTicketListType
+                            .equalsIgnoreCase("pending")) {
+
+                    }
+                case "processed":
+                    // List processed Tickets
+                    System.out.println(" Processed tickets:");
+                    for (ReimbursementTicket t:
+                         processedTickets) {
+                        System.out.println("\t" + t);
+                    }
+            }
+        });
 
         // Stop the app
         // TODO TODO Remove this expression! Testing purposes only.
