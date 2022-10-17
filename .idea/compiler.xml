@@ -9,5 +9,8 @@
         <module name="ReimbursementTicketSystem" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="ReimbursementTicketSystem" target="11" />
+    </bytecodeTargetLevel>
   </component>
 </project>
