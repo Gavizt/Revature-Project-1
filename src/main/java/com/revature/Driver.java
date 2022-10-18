@@ -9,6 +9,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static com.revature.util.DriverUtils.*;
+
 /**
  * Driver class for running the app.
  */
@@ -23,27 +25,32 @@ public class Driver {
         TODO Use SQL database for Users and Tickets
          */
         List<User> users = new LinkedList<>();
-        List<ReimbursementTicket> pendingTickets = new LinkedList<>();
-        List<ReimbursementTicket> processedTickets = new LinkedList<>();
+        List<ReimbursementTicket> reimbursementTickets = new LinkedList<>();
 //        TODO Assign a unique id to each User and Ticket
         AtomicLong nextUserId = new AtomicLong();
         AtomicLong nextTicketId = new AtomicLong();
         nextUserId.set(1);
         nextTicketId.set(1);
 
-        // Create an account (new User instance)
+        // TODO Add HTTP statuses
+
+        // Create an account (new User instance as Employee)
         app.post("/register", ctx -> {
             User receivedUser = ctx.bodyAsClass(User.class);
+
+            System.out.println("\nREGISTER NEW ACCOUNT");
+            System.out.println(formatReceived(receivedUser.toString()));
+
             // Enforce a username and password to be present
             if (receivedUser.getUsername() == null &&
             receivedUser.getPassword() == null) {
-                System.out.println("\nNo username or password for\n "
+                System.out.println("\n No username or password for\n "
                         + receivedUser);
 
                 ctx.status(HttpStatus.NOT_ACCEPTABLE);
             } else {
                 if (getUser(receivedUser, users) != null) {
-                    System.out.println("\nUsername already exists\n "
+                    System.out.println("\n Username already exists\n "
                             + receivedUser);
 
                     ctx.status(HttpStatus.NOT_ACCEPTABLE);
@@ -56,7 +63,7 @@ public class Driver {
                     receivedUser.setId(nextUserId.getAndIncrement());
                     users.add(receivedUser);
 
-                    System.out.println("\nAdded\n "
+                    System.out.println("\n\tAdded\n\t "
                             + receivedUser);
 
                     ctx.status(HttpStatus.CREATED);
@@ -65,201 +72,267 @@ public class Driver {
         });
 
         // Create a ticket (new ReimbursementTicket instance)
-        app.post("/reimbursement", ctx -> {
+        // TODO Test me!
+        app.post("/reimbursement/submit", ctx -> {
             ReimbursementTicket receivedTicket = ctx.bodyAsClass(ReimbursementTicket.class);
-            // Enforce an associated User id
-            if (receivedTicket.getAssociatedUserId() < 1) {
-                System.out.println("\nNo associated user id for\n "
-                        + receivedTicket);
 
-                ctx.status(HttpStatus.NOT_ACCEPTABLE);
-            } else {
-                /*
-                ReimbursementTicket is valid, enforce "Pending" status
-                                              assign unique id
-                 */
-                receivedTicket.setStatus("Pending");
+            System.out.println("\nREIMBURSEMENT TICKET SUBMIT");
+            System.out.println(formatReceived(receivedTicket.toString()));
+
+            boolean isValidAssociatedUserId =
+                    receivedTicket.getAssociatedUserId() > 0 &&
+                    getUser(receivedTicket.getAssociatedUserId(), users) != null;
+            boolean isValidAmount = receivedTicket.getAmount() <= 0;
+            boolean isValidDescription = receivedTicket.getDescription().isBlank();
+            boolean isValidTicket =
+                    isValidAssociatedUserId &&
+                    isValidAmount &&
+                    isValidDescription;
+
+            if (isValidAssociatedUserId) {
+                System.out.println("\n User id " +
+                        receivedTicket.getAssociatedUserId() +
+                        " not found.");
+            }
+
+            if (isValidAmount) {
+                System.out.println("\n Amount $" + receivedTicket +
+                        " not greater than $0.00.");
+            }
+
+            if (isValidDescription) {
+                System.out.println("\n Description cannot be blank.");
+            }
+
+            if (isValidTicket) {
                 receivedTicket.setId(nextTicketId.getAndIncrement());
-                pendingTickets.add(receivedTicket);
+                receivedTicket.setStatus("Pending");
+                reimbursementTickets.add(receivedTicket);
 
-                System.out.println("\nAdded\n "
+                System.out.println("\n\tSubmitted\n\t "
                         + receivedTicket);
 
                 ctx.status(HttpStatus.CREATED);
+            } else {
+                ctx.status(HttpStatus.NOT_ACCEPTABLE);
+            }
+        });
+
+        // Process a ticket (change status to "Approved" or "Denied")
+        // TODO Test me!
+        app.post("/reimbursement/process", ctx -> {
+            String receivedTicketId = ctx.queryParam("id");
+            String receivedManagerChoice = ctx.queryParam("managerChoice");
+
+            System.out.println("\nREIMBURSEMENT TICKET PROCESSING");
+            System.out.println(formatReceived(
+                    receivedTicketId,
+                    receivedManagerChoice
+            ));
+
+            boolean receivedTicketIdExists = receivedTicketId != null;
+            boolean receivedManagerChoiceExists = receivedManagerChoice != null;
+            boolean queryParamsExist = receivedTicketIdExists && receivedManagerChoiceExists;
+
+            if (!receivedTicketIdExists) {
+                System.out.println(" No ticket ID has been entered.");
+            }
+
+            if (!receivedManagerChoiceExists) {
+                System.out.println(" No manager choice for the ticket has been entered.");
+            }
+
+            if (queryParamsExist) {
+                long parsedTicketId = -1;
+                ReimbursementTicket foundTicket = null;
+                boolean isValidTicketId = true;
+                boolean isValidManagerChoice =
+                        receivedManagerChoice.equalsIgnoreCase("approve") ||
+                        receivedManagerChoice.equalsIgnoreCase("deny");
+                boolean isTicketProcessable = true;
+                boolean allIsGood = false;
+
+                try {
+                    parsedTicketId = Long.parseLong(receivedTicketId);
+                    foundTicket = getReimbursementTicket(parsedTicketId, reimbursementTickets);
+
+                    isTicketProcessable = foundTicket.getStatus().equalsIgnoreCase("pending");
+                    if (!isTicketProcessable) {
+                        System.out.println(" Ticket " + foundTicket.getId() +
+                                " is already '" + foundTicket.getStatus() + "'");
+                    }
+                } catch (NumberFormatException e) {
+                    isValidTicketId = false;
+                    System.out.println(" Ticket ID " + receivedTicketId +
+                            " is not valid.");
+                } catch (NullPointerException e) {
+                    isTicketProcessable = false;
+                    System.out.println(" Could not find a ticket with ID " +
+                            receivedTicketId + ".");
+                }
+
+                allIsGood = isValidTicketId && isValidManagerChoice && isTicketProcessable;
+
+                if (allIsGood) {
+                    switch (receivedManagerChoice.toLowerCase()) {
+                        case "approve":
+                            foundTicket.setStatus("Approved");
+                            break;
+                        case "deny":
+                            foundTicket.setStatus("Denied");
+                            break;
+                    }
+
+                    System.out.println("\t" + foundTicket.getStatus() +
+                            " ticket with ID " + foundTicket.getId());
+
+                    ctx.status(HttpStatus.ACCEPTED);
+                } else {
+                    ctx.status(HttpStatus.NOT_ACCEPTABLE);
+                }
+
             }
         });
 
         // Change role of a User
         // TODO Only allow managers to change User roles (with sessions)
-        app.post("/role/{username}/{role}", ctx -> {
-            String receivedUsername = ctx.pathParam("username");
-            String receivedRole = ctx.pathParam("role");
+        app.post("/role", ctx -> {
+            String receivedUsername = ctx.queryParam("username");
+            String receivedNewRole = ctx.queryParam("newRole");
 
-            System.out.println("\nReceived " + receivedUsername +
-                    ", " + receivedRole);
+            System.out.println("\nCHANGE ROLE");
+            System.out.println(formatReceived(
+                    receivedUsername,
+                    receivedNewRole
+            ));
 
-            // Check if the User exists
             User foundUser = getUser(receivedUsername, users);
-            if (foundUser == null) {
-                System.out.println("\nRole of " + receivedUsername +
-                        " could not be changed.");
+            boolean userExists = foundUser != null;
+            boolean newRoleExists = receivedNewRole != null;
+            boolean isValidNewRole = true;
 
-                ctx.status(HttpStatus.BAD_REQUEST);
-            } else {
-                // Change the role
-                boolean isValidRole = true;
+            if (!userExists) {
+                System.out.println("\n User " + receivedUsername + " not found.");
+            }
 
-                System.out.println("Changing role\n " + foundUser);
-                switch (receivedRole.toLowerCase()) {
-                    case "manager":
-                        foundUser.setRole("Manager");
-                        break;
+            if (!newRoleExists) {
+                System.out.println("\n New role not entered.");
+            }
+
+            if (userExists && newRoleExists) {
+                try {
+                    isValidNewRole =
+                            receivedNewRole.equalsIgnoreCase("employee") ||
+                            receivedNewRole.equalsIgnoreCase("manager");
+                } catch (NullPointerException e) {
+                    isValidNewRole = false;
+                } finally {
+                    if (!isValidNewRole) {
+                        System.out.println("\n\t" + receivedNewRole +
+                                " is not a valid role");
+                    }
+                }
+            }
+
+            if (userExists && isValidNewRole) {
+                // Good to go, change the role
+                System.out.println(" Setting " + receivedUsername + "'s role from " +
+                        foundUser.getRole() + "\n\tto");
+
+                switch (receivedNewRole.toLowerCase()) {
                     case "employee":
                         foundUser.setRole("Employee");
                         break;
-                    default:
-                        // The input role is wrong, do nothing
-                        isValidRole = false;
+                    case "manager":
+                        foundUser.setRole("Manager");
+                        break;
                 }
 
-                if (isValidRole) {
-                    System.out.println("\tto\n " + foundUser);
+                System.out.println(" " + foundUser.getRole());
 
-                    ctx.status(HttpStatus.ACCEPTED);
-                } else {
-                    System.out.println("\tInvalid role " + receivedRole
-                            + ".\n\t" + receivedUsername + "'s role not changed.");
-
-                    ctx.status(HttpStatus.NOT_MODIFIED);
-                }
+                ctx.status(HttpStatus.ACCEPTED);
+            } else {
+                ctx.status(HttpStatus.NOT_MODIFIED);
             }
-        });
-
-        // Change status of a ReimbursementTicket (process it)
-        app.post("/status/{ticketId}/{status}", ctx -> {
-            String receivedTicketId = ctx.pathParam("ticketId");
-            String receivedStatus = ctx.pathParam("status");
-
-            System.out.println("\nReceived " + receivedTicketId +
-                    ", " + receivedStatus);
-
-            // Try parsing a long from the ticketId param
-            long parsedTicketId = 0;
-            boolean isValidTicketId = true;
-            try {
-                parsedTicketId = Long.parseLong(receivedTicketId);
-            } catch (NumberFormatException e) {
-                System.out.println(" Could not parse a numeric from " + receivedTicketId);
-                isValidTicketId = false;
-
-                ctx.status(HttpStatus.NOT_ACCEPTABLE);
-            }
-
-
-            if (isValidTicketId) {
-                // Check if the ReimbursementTicket exists
-                ReimbursementTicket foundTicket = getReimbursementTicket(parsedTicketId, pendingTickets);
-                if (foundTicket != null) {
-                    boolean isValidStatus = true;
-                    switch (receivedStatus.toLowerCase()) {
-                        case "approved":
-                            foundTicket.setStatus("Approved");
-                            break;
-                        case "denied":
-                            foundTicket.setStatus("Denied");
-                            break;
-                        default:
-                            // The input status is wrong, do nothing
-                            isValidStatus = false;
-                            break;
-                    }
-
-                    if (isValidStatus) {
-                        processedTickets.add(foundTicket);
-                        pendingTickets.remove(foundTicket);
-                    }
-                }
-            }
-
         });
 
         // List Users (Employees and Managers)
         // TODO Remove this expression! Testing purposes only.
-        app.get("/users/{role}", ctx -> {
-            String receivedRole = ctx.pathParam("role");
+        app.get("/users", ctx -> {
 
-            switch (receivedRole.toLowerCase()) {
-                case "employees":
-                    // List all Employees
-                    System.out.println("\nEmployees:");
-                    for (User u:
-                         users) {
-                        if (u.getRole().equalsIgnoreCase("employee")) {
-                            System.out.println("\t" + u);
-                        }
-                    }
-                    break;
-                case "managers":
-                    // List all Managers
-                    System.out.println("\nManagers:");
-                    for (User u:
-                         users) {
-                        if (u.getRole().equalsIgnoreCase("manager")) {
-                            System.out.println("\t" + u);
-                        }
-                    }
-                    break;
-                default:
-                    // List all Users (both roles)
-                    System.out.println("\nUsers:");
-                    if (users.size() == 0) {
-                        System.out.println(" There are no registered users.");
-                    } else {
-                        for (User u:
-                                users) {
-                            System.out.println("\t" + u);
-                        }
-                    }
-                    break;
+            System.out.println("\nLIST USERS");
+
+            if (users.isEmpty()) {
+                System.out.println(" There are no Users");
+            } else {
+                System.out.println(" " + users.size() + " Users");
+                System.out.println(" Managers:");
+                for (User u:
+                     users) {
+                    System.out.println("\t" + u);
+                }
+                System.out.println(" Employees:");
+                for (User u:
+                     users) {
+                    System.out.println("\t" + u);
+                }
             }
-
-            ctx.status(HttpStatus.OK);
         });
 
         // List Tickets (ReimbursementTickets)
         // TODO Remove this expression! Testing purposes only.
-        app.get("/tickets/{pendingOrProcessed}/{username}", ctx -> {
-            String receivedTicketListType = ctx.pathParam("pendingOrProcessed");
-            String receivedUsername = ctx.pathParam("username");
-            User foundUser = getUser(receivedUsername, users);
+        // TODO Test me!
+        app.get("/tickets", ctx -> {
+            String receivedStatus = ctx.queryParam("status");
+            String receivedUsername = ctx.queryParam("username");
 
-            System.out.println("\nReceived '"
-                    + receivedTicketListType + "', '"
-                    + receivedUsername + "'");
-            System.out.print("\n Tickets for ");
+            System.out.println("\nLIST TICKETS");
+            System.out.println(formatReceived(receivedStatus, receivedUsername));
 
-            switch (receivedTicketListType.toLowerCase()) {
-                default:
-                case "pending":
-                    // List pending Tickets
-                    System.out.println(" Pending tickets:");
-                    for (ReimbursementTicket t:
-                         pendingTickets) {
-                        System.out.println("\t" + t);
-                    }
+            /*
+             * Four cases with the two inputs (status|username):
+             *  (status & username): print tickets of status by username.
+             *  (status & !username): print tickets of status.
+             *  (!status & username): print tickets by username.
+             *  (!status & !username): print tickets.
+             */
 
-                    if (receivedTicketListType
-                            .equalsIgnoreCase("pending")) {
-
-                    }
-                case "processed":
-                    // List processed Tickets
-                    System.out.println(" Processed tickets:");
-                    for (ReimbursementTicket t:
-                         processedTickets) {
-                        System.out.println("\t" + t);
-                    }
+            // Determine which case to execute:
+            boolean isValidStatus = true;
+            boolean isValidUsername = false;
+            User foundUser = null;
+            if (stringsExist(receivedStatus)) {
+                try {
+                    isValidStatus =
+                            receivedStatus.equalsIgnoreCase("pending") ||
+                            receivedStatus.equalsIgnoreCase("approved") ||
+                            receivedStatus.equalsIgnoreCase("denied");
+                } catch (NullPointerException e) {
+                    isValidStatus = false;
+                }
             }
+            if (stringsExist(receivedUsername)) {
+                foundUser = getUser(receivedUsername, users);
+                isValidUsername = foundUser != null;
+            }
+
+            if (isValidStatus && !isValidUsername) {
+                // (status & !username): print tickets of status.
+                printReimbursementTickets(receivedStatus, reimbursementTickets);
+            } else if (!isValidStatus && isValidUsername) {
+                // (!status & username): print tickets by username.
+                printReimbursementTickets(foundUser, reimbursementTickets);
+            } else if (isValidStatus && isValidUsername) {
+                // (status & username): print tickets of status by username.
+                printReimbursementTickets(foundUser, receivedStatus, reimbursementTickets);
+            } else {
+                // (!status & !username): print tickets.
+                for (ReimbursementTicket t:
+                     reimbursementTickets) {
+                    System.out.println("\tt");
+                }
+            }
+
         });
 
         // Stop the app
@@ -269,53 +342,5 @@ public class Driver {
             app.close();
         });
 
-    }
-
-    private static User getUser(User user, List<User> users) {
-        return getUser(user.getUsername(), users);
-    }
-
-    private static User getUser(String username, List<User> users) {
-        for (User u:
-                users) {
-            if (u.getUsername().equals(username)) {
-                return u;
-            }
-        }
-
-        return null;
-    }
-
-    private static User getUser(long id, List<User> users) {
-        for (User u:
-             users) {
-            if (u.getId() == id) {
-                return u;
-            }
-        }
-
-        return null;
-    }
-
-    private static ReimbursementTicket getReimbursementTicket(ReimbursementTicket ticket, List<ReimbursementTicket> tickets) {
-        for (ReimbursementTicket t:
-             tickets) {
-            if (t.equals(ticket)) {
-                return t;
-            }
-        }
-
-        return null;
-    }
-
-    private static ReimbursementTicket getReimbursementTicket(long ticketId, List<ReimbursementTicket> tickets) {
-        for (ReimbursementTicket t:
-             tickets) {
-            if (t.getId() == ticketId) {
-                return t;
-            }
-        }
-
-        return null;
     }
 }

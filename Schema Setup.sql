@@ -15,7 +15,7 @@
  * 		Ticket is assigned the default status "Pending". A
  * 		Manager processes Tickets by approving or denying
  * 		them. This assigns a Ticket's status to "Approved"
- * 		or "Denied", depending on what the Manager choses.
+ * 		or "Denied", depending on what the Manager chooses.
  */
 
 

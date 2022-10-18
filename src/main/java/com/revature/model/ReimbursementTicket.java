@@ -4,16 +4,14 @@ import java.util.Objects;
 
 /**
  * ReimbursementTicket class for tickets in the system.
- *      Each has a unique id and is associated to a particular User.
- *      Status is automatically set to "Pending" when created.
  *
  * @author johnainsworth
  */
 public class ReimbursementTicket {
     private long id;
-    private int amount;
-    private String status;
     private long associatedUserId;
+    private String status;
+    private int amount;
     private String description;
 
 
@@ -21,11 +19,11 @@ public class ReimbursementTicket {
         super();
     }
 
-    public ReimbursementTicket(long id, int amount, String status, long associatedUserId, String description) {
+    public ReimbursementTicket(long id, long associatedUserId, String status, int amount, String description) {
         this.id = id;
-        this.amount = amount;
-        this.status = status;
         this.associatedUserId = associatedUserId;
+        this.status = status;
+        this.amount = amount;
         this.description = description;
     }
 
@@ -38,12 +36,12 @@ public class ReimbursementTicket {
         this.id = id;
     }
 
-    public int getAmount() {
-        return this.amount;
+    public long getAssociatedUserId() {
+        return this.associatedUserId;
     }
 
-    public void setAmount(int amount) {
-        this.amount = amount;
+    public void setAssociatedUserId(long associatedUserId) {
+        this.associatedUserId = associatedUserId;
     }
 
     public String getStatus() {
@@ -54,12 +52,12 @@ public class ReimbursementTicket {
         this.status = status;
     }
 
-    public long getAssociatedUserId() {
-        return this.associatedUserId;
+    public int getAmount() {
+        return this.amount;
     }
 
-    public void setAssociatedUserId(long associatedUserId) {
-        this.associatedUserId = associatedUserId;
+    public void setAmount(int amount) {
+        this.amount = amount;
     }
 
     public String getDescription() {
@@ -70,9 +68,8 @@ public class ReimbursementTicket {
         this.description = description;
     }
 
-    /*
-    Objects are differed by their unique id.
-     */
+
+    // Objects are differed by their unique id.
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -81,9 +78,7 @@ public class ReimbursementTicket {
         return id == that.id;
     }
 
-    /*
-    Generate hashcode with object's id.
-     */
+    // Generate hashcode with object's id.
     @Override
     public int hashCode() {
         return Objects.hash(id);
@@ -92,11 +87,11 @@ public class ReimbursementTicket {
     @Override
     public String toString() {
         return "ReimbursementTicket {" +
-                "id=\t" + id +
-                ", amount=\t" + amount +
-                ", status=\t'" + status + '\'' +
-                ", associatedUserId=\t" + associatedUserId +
-                "\n\tdescription=\t'" + description + '\'' +
+                "id=" + id +
+                ",\tassociatedUserId=" + associatedUserId +
+                ",\tstatus='" + status + '\'' +
+                ",\tamount=$" + amount +
+                ",\n\tdescription='" + description + '\'' +
                 '}';
     }
 }

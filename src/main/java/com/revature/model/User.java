@@ -81,7 +81,7 @@ public class User {
 
     @Override
     public String toString() {
-        return "User{" +
+        return "User {" +
                 "id=" + this.id +
                 ",\trole='" + this.role + '\'' +
                 ",\tusername='" + this.username + '\'' +
