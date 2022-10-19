@@ -2,6 +2,9 @@ package com.revature.util;
 
 import com.revature.model.ReimbursementTicket;
 import com.revature.model.User;
+import io.javalin.http.Context;
+import io.javalin.http.Handler;
+import jakarta.servlet.http.HttpSession;
 
 import java.util.List;
 
@@ -11,6 +14,30 @@ import java.util.List;
  * @author johnainsworth
  */
 public class DriverUtils {
+
+    public static void invalidateSession(Context ctx) {
+        HttpSession session = ctx.req().getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
+    }
+
+    public static boolean isSessionRole(Context ctx, String role) {
+        /**
+         * Return the role of a Session
+         */
+        HttpSession session = ctx.req().getSession(false);
+
+        if (session != null) {
+            if (session.getAttribute("role") != null) {
+                return session.getAttribute("role")
+                        .toString()
+                        .equalsIgnoreCase(role);
+            }
+        }
+
+        return false;
+    }
 
     public static void printReimbursementTickets(String status, List<ReimbursementTicket> tickets) {
         /**
@@ -59,20 +86,23 @@ public class DriverUtils {
         /**
          * Returns false if any string is empty, blank, or null.
          */
-        for (String s:
-                strings) {
-            if (s.isEmpty() || s.isBlank() || s == null) {
-                return false;
+        try {
+            for (String s:
+                    strings) {
+                if (s.isEmpty() || s.isBlank() || s == null) {
+                    return false;
+                }
             }
+            return true;
+        } catch (NullPointerException e) {
+            return false;
         }
-
-        return true;
     }
     public static String formatReceived(String...strings) {
         /**
          * Returns a formatted string for returning input Strings.
          */
-        StringBuilder received = new StringBuilder("Received");
+        StringBuilder received = new StringBuilder(" Received");
 
         for (String s:
                 strings) {

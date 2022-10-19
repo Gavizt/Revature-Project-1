@@ -11,7 +11,7 @@ public class ReimbursementTicket {
     private long id;
     private long associatedUserId;
     private String status;
-    private int amount;
+    private double amount;
     private String description;
 
 
@@ -52,11 +52,11 @@ public class ReimbursementTicket {
         this.status = status;
     }
 
-    public int getAmount() {
+    public double getAmount() {
         return this.amount;
     }
 
-    public void setAmount(int amount) {
+    public void setAmount(double amount) {
         this.amount = amount;
     }
 
