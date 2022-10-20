@@ -19,7 +19,7 @@ public class ReimbursementTicket {
         super();
     }
 
-    public ReimbursementTicket(long id, long associatedUserId, String status, int amount, String description) {
+    public ReimbursementTicket(long id, long associatedUserId, String status, double amount, String description) {
         this.id = id;
         this.associatedUserId = associatedUserId;
         this.status = status;
