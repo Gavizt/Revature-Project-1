@@ -2,11 +2,18 @@ package com.revature.util;
 
 import com.revature.model.ReimbursementTicket;
 import com.revature.model.User;
+import io.javalin.Javalin;
 import io.javalin.http.Context;
-import io.javalin.http.Handler;
 import jakarta.servlet.http.HttpSession;
 
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.List;
+import java.util.Properties;
 
 /**
  * Utility class to be used with the Driver class running the app.
@@ -14,6 +21,48 @@ import java.util.List;
  * @author johnainsworth
  */
 public class DriverUtils {
+
+    // Setting up properties & connections:
+    public static Properties getProperties(Properties props, String propertiesFile) {
+        try(FileReader reader = new FileReader(propertiesFile)) {
+            props.load(reader);
+        } catch (FileNotFoundException e) {
+            System.out.println(propertiesFile + " not found.");
+            e.printStackTrace();
+            return null;
+        } catch (IOException e) {
+            System.out.println("An IOException occurred");
+            e.printStackTrace();
+            return null;
+        }
+        return props;
+    }
+
+    public static Javalin startJavalinApp(Properties props) {
+        try {
+            return Javalin.create().start(
+                    Integer.parseInt(props.getProperty("port"))
+            );
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public static Connection connectToPostgresDb(Properties props) {
+        try {
+            return DriverManager.getConnection(
+                    props.getProperty("url"),
+                    props.getProperty("username"),
+                    props.getProperty("password")
+            );
+        } catch (SQLException e) {
+            return null;
+        }
+    }
+    public static void mirrorMessage(Context ctx, String message) {
+        ctx.json(message);
+        System.out.println(message);
+    }
 
     public static void invalidateSession(Context ctx) {
         HttpSession session = ctx.req().getSession(false);
