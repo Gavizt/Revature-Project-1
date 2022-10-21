@@ -42,12 +42,70 @@ public class Driver {
             System.out.println("Connected to Postgres DB as user: " + props.getProperty("username"));
         }
 
-        // TODO Add HTTP statuses.
         // App is properly set up and running
         if (isJavalinRunning && isPostgresDbConnected) {
             DriverRepository driverRepository = new DriverRepository(props);
 
         // GENERAL PURPOSE
+            // List Users
+            app.get("/users", ctx -> {
+                /*
+                 * 1) Check if Manager is logged in
+                 * 2) List Users
+                 */
+                mirrorMessage(ctx, "\nLIST USERS");
+
+                // 1) Check if Manager is logged in
+                boolean isManager = isSessionRole(ctx, "manager");
+
+                if (!isManager) {
+                    mirrorMessage(ctx, " Manager is not logged in.");
+                    ctx.status(HttpStatus.UNAUTHORIZED);
+                } else {
+                    // 2) List Users
+                    String role = ctx.queryParam("role");
+
+                    if (stringsExist(role)) {
+                        // List a role
+                        List<User> users = driverRepository.getUserList(role);
+                        if (users.isEmpty()) {
+                            mirrorMessage(ctx,
+                                    " There are no users registered as " +
+                                            role);
+                            ctx.status(HttpStatus.NO_CONTENT);
+                        } else {
+                            mirrorMessage(ctx,
+                                     " " + role + "s:\n" +
+                                    buildUsersString(users));
+                            ctx.status(HttpStatus.OK);
+                        }
+                    } else {
+                        // List all
+                        List<User> users = driverRepository.getUserList();
+                        if (users.isEmpty()) {
+                            mirrorMessage(ctx, " There are no registered users.");
+                            ctx.status(HttpStatus.NO_CONTENT);
+                        } else {
+                            mirrorMessage(ctx, buildUsersString(users));
+                            ctx.status(HttpStatus.OK);
+                        }
+                    }
+                }
+            });
+            // User updates their account
+            // TODO Write me!
+            //  Will allow User to change their password.
+            app.post("/account/edit", ctx -> {
+                ctx.status(HttpStatus.NOT_IMPLEMENTED);
+            });
+            // Employee updates a pending ticket of theirs
+            // TODO Write me!
+            //  Will allow User to change description, amount of pending ticket.
+            app.post("/ticket/edit", ctx -> {
+                ctx.status(HttpStatus.NOT_IMPLEMENTED);
+            });
+
+        // CONCERNED WITH CHANGE ROLES FEATURE
             // Manager changes role of a User
             app.post("/role", ctx -> {
                 /*
@@ -64,6 +122,7 @@ public class Driver {
 
                 if (!isManager) {
                     mirrorMessage(ctx, " Only logged in managers can change roles of users.");
+                    ctx.status(HttpStatus.UNAUTHORIZED);
                 } else {
                     // 2) Change role accordingly
                     String userIdString = ctx.queryParam("userId");
@@ -84,13 +143,16 @@ public class Driver {
                     boolean newRoleExists = stringsExist(newRole);
                     boolean isValidNewRole = false;
 
+                    StringBuilder errorOutput = new StringBuilder();
                     if (!userExists) {
-                        mirrorMessage(ctx, "\n User with ID " + userIdString + " not found.");
+                        errorOutput.append(" User with ID " + userIdString + " not found.");
+                        ctx.status(HttpStatus.BAD_REQUEST);
                     }
-
                     if (!newRoleExists) {
-                        mirrorMessage(ctx, "\n New role not entered.");
+                        errorOutput.append("\n New role not entered.");
+                        ctx.status(HttpStatus.BAD_REQUEST);
                     }
+                    mirrorMessage(ctx, errorOutput.toString());
 
                     if (userExists && newRoleExists) {
                         try {
@@ -103,6 +165,7 @@ public class Driver {
                             if (!isValidNewRole) {
                                 mirrorMessage(ctx, "\n\t" + newRole +
                                         " is not a valid role");
+                                ctx.status(HttpStatus.NOT_ACCEPTABLE);
                             }
                         }
                     }
@@ -129,55 +192,6 @@ public class Driver {
                     }
                 }
             });
-            // List Users
-            app.get("/users", ctx -> {
-                /*
-                 * 1) Check for a Session and User's role in the Session
-                 *      without creating a new session
-                 * 2) List Users
-                 */
-                mirrorMessage(ctx, "\nLIST USERS");
-
-                // 1) Check for a Session and User's role in the Session
-                //      without creating a new session
-                boolean isManager = isSessionRole(ctx, "manager");
-
-                if (!isManager) {
-                    mirrorMessage(ctx, " Manager is not logged in.");
-                } else {
-                    String role = ctx.queryParam("role");
-
-                    if (stringsExist(role)) {
-                        // List a role
-                        List<User> users = driverRepository.getUserList(role);
-                        if (users.isEmpty()) {
-                            mirrorMessage(ctx,
-                                    " There are no users registered as " +
-                                            role);
-                        } else {
-                            mirrorMessage(ctx,
-                                     " " + role + "s:\n" +
-                                    buildUsersString(users));
-                        }
-                    } else {
-                        // List all
-                        List<User> users = driverRepository.getUserList();
-                        if (users.isEmpty()) {
-                            mirrorMessage(ctx, " There are no registered users.");
-                        } else {
-                            mirrorMessage(ctx, buildUsersString(users));
-                        }
-                    }
-                }
-            });
-            // User updates their account
-            // TODO Write me!
-            //  Will allow User to change their password
-            app.post("/account/edit", ctx -> {});
-            // Employee updates a pending ticket of theirs
-            // TODO Write me!
-            //  Will allow User to change description, amount of pending ticket.
-            app.post("/ticket/edit", ctx -> {});
 
         // CONCERNED WITH LOGIN/REGISTER FEATURE
             // Register new User
@@ -193,14 +207,15 @@ public class Driver {
 
                 // Enforce a username and password to be present
                 if (user.getUsername() == null && user.getPassword() == null) {
-                    mirrorMessage(ctx, " No username or password for\n "
-                            + user);
+                    mirrorMessage(ctx, " Username or password has not been entered");
 
-                    ctx.status(HttpStatus.NOT_ACCEPTABLE);
+                    ctx.status(HttpStatus.BAD_REQUEST);
                 } else {
                     if (driverRepository.getUserRecord(user.getUsername()) != null) {
-                        mirrorMessage(ctx, " Username already exists\n "
-                                + user);
+                        mirrorMessage(ctx,
+                                " Username " +
+                                        user.getUsername() +
+                                        " already exists.");
 
                         ctx.status(HttpStatus.NOT_ACCEPTABLE);
                     } else {
@@ -241,15 +256,18 @@ public class Driver {
 
                 // 2) Their credentials are checked
                 //      + check if either is present
-                boolean usernameExists = stringsExist(username);
-                boolean passwordExists = stringsExist(password);
-                boolean paramsExist = usernameExists && passwordExists;
-                if (!usernameExists) {
-                    mirrorMessage(ctx, " A username has not been entered.");
+                boolean paramsExist = stringsExist(username) && stringsExist(password);
+
+                StringBuilder errorOutput = new StringBuilder();
+                if (!stringsExist(username)) {
+                    errorOutput.append(" A username has not been entered.");
+                    ctx.status(HttpStatus.BAD_REQUEST);
                 }
-                if (!passwordExists) {
-                    mirrorMessage(ctx, " A password has not been entered.");
+                if (!stringsExist(password)) {
+                    errorOutput.append("\n A password has not been entered.");
+                    ctx.status(HttpStatus.BAD_REQUEST);
                 }
+                mirrorMessage(ctx, errorOutput.toString());
 
                 //      + correct username & password?
                 User foundUser = null;
@@ -267,6 +285,7 @@ public class Driver {
                 // 3) If they enter correctly
                 if (!isCorrectUsernamePassword) {
                     mirrorMessage(ctx, " Incorrect username or password.");
+                    ctx.status(HttpStatus.NOT_ACCEPTABLE);
                 } else {
                     //      + a session is created with their role attribute.
                     // Create a session if one does not exist
@@ -284,6 +303,7 @@ public class Driver {
                     }
                     mirrorMessage(ctx, " User " + foundUser.getUsername() +
                             " has logged in as " + session.getAttribute("role") + ".");
+                    ctx.status(HttpStatus.ACCEPTED);
                 }
             });
             // Logout
@@ -318,6 +338,7 @@ public class Driver {
 
                 if (!isEmployee) {
                     mirrorMessage(ctx, " Only logged in employees can submit reimbursement requests.");
+                    ctx.status(HttpStatus.UNAUTHORIZED);
                 } else {
                     // 2) Submit ReimbursementTicket
                     String amountString = ctx.queryParam("amount");
@@ -338,6 +359,7 @@ public class Driver {
                         } catch (NumberFormatException e) {
                             e.printStackTrace();
                             isValidAmount = false;
+                            ctx.status(HttpStatus.BAD_REQUEST);
                         }
                     }
                     boolean isValidDescription = stringsExist(description);
@@ -346,9 +368,11 @@ public class Driver {
                     StringBuilder errorOutput = new StringBuilder();
                     if (!isValidAmount) {
                         errorOutput.append(" Amount $" + amount + " not positive.");
+                        ctx.status(HttpStatus.BAD_REQUEST);
                     }
                     if (!isValidDescription) {
                         errorOutput.append("\n Description cannot be empty or blank.");
+                        ctx.status(HttpStatus.BAD_REQUEST);
                     }
                     mirrorMessage(ctx, errorOutput.toString());
 
@@ -384,6 +408,7 @@ public class Driver {
                 boolean isManager = isSessionRole(ctx, "manager");
                 if (!isManager) {
                     mirrorMessage(ctx, " Only logged in managers can process tickets.");
+                    ctx.status(HttpStatus.UNAUTHORIZED);
                 } else {
                     // 2) Process ReimbursementTicket
                     String ticketIdParam = ctx.queryParam("ticketId");
@@ -395,20 +420,22 @@ public class Driver {
                     StringBuilder errorOutput = new StringBuilder();
                     if (!stringsExist(ticketIdParam)) {
                         errorOutput.append(" No ticket ID has been entered.");
+                        ctx.status(HttpStatus.BAD_REQUEST);
                     }
                     if (!stringsExist(managerChoiceParam)) {
                         errorOutput.append("\n No manager choice for the ticket has been entered.");
+                        ctx.status(HttpStatus.BAD_REQUEST);
                     }
                     mirrorMessage(ctx, errorOutput.toString());
 
                     //      * check if it can be processed
                     if (stringsExist(ticketIdParam) && stringsExist(managerChoiceParam)) {
-
                         long ticketId = -1;
                         try {
                             ticketId = Long.parseLong(ticketIdParam);
                         } catch (NumberFormatException e) {
                             e.printStackTrace();
+                            ctx.status(HttpStatus.BAD_REQUEST);
                         }
 
                         ReimbursementTicket ticket = driverRepository
@@ -421,10 +448,12 @@ public class Driver {
                                     .getReimbursementTicketRecord(ticket)
                                     .getStatus() +
                                     " ticket " + ticketId);
+                            ctx.status(HttpStatus.ACCEPTED);
                         } else {
                             mirrorMessage(ctx,
                                     "Ticket " + ticketId +
                                     " not processed.");
+                            ctx.status(HttpStatus.NOT_MODIFIED);
                         }
                     }
                 }
@@ -444,6 +473,7 @@ public class Driver {
                 if (!isSessionRole(ctx, "manager") && !isSessionRole(ctx, "employee")
                 ) {
                     mirrorMessage(ctx, " Only logged in users can view reimbursement tickets.");
+                    ctx.status(HttpStatus.UNAUTHORIZED);
                 }
 
                 String status = assignStringIfExists(ctx.queryParam("status"));
@@ -463,6 +493,7 @@ public class Driver {
 
                     mirrorMessage(ctx, buildReimbursementTicketsString(
                             tickets, driverRepository));
+                    ctx.status(HttpStatus.ACCEPTED);
                 }
 
                 // 2b) List Employee's if Employee
@@ -475,21 +506,8 @@ public class Driver {
 
                     mirrorMessage(ctx, buildReimbursementTicketsString(
                             tickets, driverRepository));
+                    ctx.status(HttpStatus.ACCEPTED);
                 }
-            });
-
-        // TESTING
-            // Stop the app
-            // TODO Remove this expression! Testing purposes only.
-            app.get("/close", ctx -> {
-                /*
-                 * 1) Close all Sessions
-                 * 2) Close the app.
-                 */
-                mirrorMessage(ctx, "\nClosing the app...");
-                invalidateSession(ctx);
-                connSQL.close();
-                app.close();
             });
         }
     }
