@@ -86,12 +86,11 @@ public class ReimbursementTicket {
 
     @Override
     public String toString() {
-        return "ReimbursementTicket {" +
-                "id=" + id +
-                ",\tassociatedUserId=" + associatedUserId +
-                ",\tstatus='" + status + '\'' +
-                ",\tamount=$" + amount +
-                ",\n\tdescription='" + description + '\'' +
-                '}';
+        return "Ticket: " +
+                "id= " + id +
+                ",\tuserId= " + associatedUserId +
+                ",\tstatus= '" + status + '\'' +
+                ",\t$" + amount +
+                "\n\t  description= '" + description + '\'';
     }
 }

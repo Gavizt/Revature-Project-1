@@ -88,4 +88,10 @@ public class User {
                 ",\tpassword='" + this.password + '\'' +
                 '}';
     }
+
+    public String toStringNoPassword() {
+        return "id=" + this.id +
+                ",\trole='" + this.role + '\'' +
+                ",\tusername='" + this.username + '\'';
+    }
 }

@@ -2,6 +2,7 @@ package com.revature.util;
 
 import com.revature.model.ReimbursementTicket;
 import com.revature.model.User;
+import com.revature.repository.DriverRepository;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
 import jakarta.servlet.http.HttpSession;
@@ -23,7 +24,7 @@ import java.util.Properties;
 public class DriverUtils {
 
     // Setting up properties & connections:
-    public static Properties getProperties(Properties props, String propertiesFile) {
+    public static Properties loadProperties(Properties props, String propertiesFile) {
         try(FileReader reader = new FileReader(propertiesFile)) {
             props.load(reader);
         } catch (FileNotFoundException e) {
@@ -37,17 +38,16 @@ public class DriverUtils {
         }
         return props;
     }
-
     public static Javalin startJavalinApp(Properties props) {
         try {
             return Javalin.create().start(
                     Integer.parseInt(props.getProperty("port"))
             );
         } catch (Exception e) {
+            e.printStackTrace();
             return null;
         }
     }
-
     public static Connection connectToPostgresDb(Properties props) {
         try {
             return DriverManager.getConnection(
@@ -56,21 +56,18 @@ public class DriverUtils {
                     props.getProperty("password")
             );
         } catch (SQLException e) {
+            e.printStackTrace();
             return null;
         }
     }
-    public static void mirrorMessage(Context ctx, String message) {
-        ctx.json(message);
-        System.out.println(message);
-    }
 
+    // Session handling:
     public static void invalidateSession(Context ctx) {
         HttpSession session = ctx.req().getSession(false);
         if (session != null) {
             session.invalidate();
         }
     }
-
     public static boolean isSessionRole(Context ctx, String role) {
         /**
          * Return the role of a Session
@@ -87,65 +84,47 @@ public class DriverUtils {
 
         return false;
     }
-
-    public static void printReimbursementTickets(String status, List<ReimbursementTicket> tickets) {
+    public static void updateSessionRole(Context ctx, String newRole) {
         /**
-         * List ReimbursementTickets by given status.
+         * Change the role of the current session
          */
-        System.out.println(" " + status + ":");
-        for (ReimbursementTicket t:
-                tickets) {
-            if (t.getStatus().equalsIgnoreCase(status)) {
-                System.out.println("\t" + t);
+        HttpSession session = ctx.req().getSession(false);
+
+        if (session != null) {
+            if (session.getAttribute("role") != null) {
+                session.setAttribute("role", newRole.toLowerCase());
             }
         }
     }
+    public static long getSessionUserId(Context ctx) {
+        HttpSession session = ctx.req().getSession(false);
+        long sessionUserId = -1;
 
-    public static void printReimbursementTickets(User user, List<ReimbursementTicket> tickets) {
-        /**
-         * List ReimbursementTickets submitted by user
-         */
-        System.out.println(" " + user.getUsername() +
-                "'s tickets:");
-        for (ReimbursementTicket t:
-                tickets) {
-            if (t.getAssociatedUserId() == user.getId()) {
-                System.out.println("\t" + t);
+        if (session != null) {
+            if (session.getAttribute("id") != null) {
+                sessionUserId = Long.parseLong(session.getAttribute("id").toString());
             }
         }
+
+        return sessionUserId;
+    }
+    public static String getSessionUsername(Context ctx) {
+        HttpSession session = ctx.req().getSession(false);
+        String username = null;
+
+        if (session != null) {
+            if (session.getAttribute("id") != null) {
+                username = session.getAttribute("username").toString();
+            }
+        }
+
+        return username;
     }
 
-    public static void printReimbursementTickets(
-            User user, String status, List<ReimbursementTicket> tickets) {
-        /**
-         * List ReimbursementTickets submitted by user of given status.
-         */
-        System.out.println(" " + user.getUsername() +
-                "'s " + status + " tickets:");
-        for (ReimbursementTicket t:
-                tickets) {
-            if (t.getId() == user.getId() &&
-                    t.getStatus().equalsIgnoreCase(status)) {
-                System.out.println("\t" + t);
-            }
-        }
-    }
-
-    public static boolean stringsExist(String...strings) {
-        /**
-         * Returns false if any string is empty, blank, or null.
-         */
-        try {
-            for (String s:
-                    strings) {
-                if (s.isEmpty() || s.isBlank() || s == null) {
-                    return false;
-                }
-            }
-            return true;
-        } catch (NullPointerException e) {
-            return false;
-        }
+    // Printing:
+    public static void mirrorMessage(Context ctx, String message) {
+        ctx.json(message);
+        System.out.println(message);
     }
     public static String formatReceived(String...strings) {
         /**
@@ -160,51 +139,57 @@ public class DriverUtils {
 
         return received.toString();
     }
+    public static String buildReimbursementTicketsString(
+            List<ReimbursementTicket> tickets, DriverRepository driverRepository) {
+        StringBuilder ticketsSting = new StringBuilder();
+        long currentUserId = 0;
 
-    public static User getUser(User user, List<User> users) {
-        /**
-         * Returns a User from a list of Users.
-         */
-        return getUser(user.getUsername(), users);
-    }
-
-    public static User getUser(long id, List<User> users) {
-        /**
-         * Returns a User from a list of Users by id.
-         */
-        for (User u:
-                users) {
-            if (u.getId() == id) {
-                return u;
-            }
-        }
-
-        return null;
-    }
-
-    public static User getUser(String username, List<User> users) {
-        /**
-         * Returns a User from a list of Users by username.
-         */
-        for (User u:
-                users) {
-            if (u.getUsername().equals(username)) {
-                return u;
-            }
-        }
-
-        return null;
-    }
-
-    public static ReimbursementTicket getReimbursementTicket(long ticketId, List<ReimbursementTicket> tickets) {
-        /**
-         * Returns a ReimbursementTicket from a list of ReimbursementTickets by id.
-         */
         for (ReimbursementTicket t:
-                tickets) {
-            if (t.getId() == ticketId) {
-                return t;
+             tickets) {
+            if (currentUserId != t.getAssociatedUserId()) {
+                currentUserId = t.getAssociatedUserId();
+                ticketsSting.append(" " +
+                        driverRepository.getUserRecord(currentUserId).getUsername() +
+                        ":\n"
+                );
             }
+
+            ticketsSting.append("\t" + t + "\n");
+        }
+
+        return (ticketsSting.length() == 0) ? "Empty List" : String.valueOf(ticketsSting);
+    }
+    public static String buildUsersString(List<User> users) {
+        StringBuilder usersString = new StringBuilder();
+
+        for (User u:
+             users) {
+            usersString.append("\t" + u.toStringNoPassword() + "\n");
+        }
+
+        return (usersString.length() == 0) ? "Empty List" : String.valueOf(usersString);
+    }
+
+    // Other:
+    public static boolean stringsExist(String...strings) {
+        /**
+         * Returns false if any string is empty, blank, or null.
+         */
+        try {
+            for (String s:
+                    strings) {
+                if (s.isEmpty() || s.isBlank()) {
+                    return false;
+                }
+            }
+            return true;
+        } catch (NullPointerException e) {
+            return false;
+        }
+    }
+    public static String assignStringIfExists(String string) {
+        if (stringsExist(string)) {
+            return string;
         }
 
         return null;
